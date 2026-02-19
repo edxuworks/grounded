@@ -1,0 +1,9 @@
+{
+  // Config for Node.js files like vite.config.ts and vitest.config.ts.
+  // These files run in Node, not the browser, so they need different settings.
+  "extends": "@grounded/config/tsconfig/node-app",
+  "compilerOptions": {
+    "composite": true
+  },
+  "include": ["vite.config.ts", "vitest.config.ts", "postcss.config.js"]
+}

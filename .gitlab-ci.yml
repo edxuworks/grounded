@@ -1,0 +1,102 @@
+###############################################################################
+# Grounded v2 — GitLab CI/CD Pipeline
+#
+# Runs on every push and merge request.
+# Pipeline stages:
+#   1. install   — install dependencies (cached)
+#   2. check     — TypeScript type checking (all packages in parallel)
+#   3. test      — run all unit tests with coverage
+#   4. build     — production build (on main branch only)
+###############################################################################
+
+image: node:24-alpine
+
+variables:
+  # Cache pnpm store between pipeline runs to speed up installs.
+  PNPM_HOME: "$CI_PROJECT_DIR/.pnpm-store"
+
+cache:
+  key:
+    files:
+      - pnpm-lock.yaml
+  paths:
+    - .pnpm-store/
+    - node_modules/
+    - apps/api/node_modules/
+    - apps/web/node_modules/
+    - packages/*/node_modules/
+
+before_script:
+  # Install pnpm if not already available in the image.
+  - npm install -g pnpm
+  - pnpm config set store-dir $PNPM_HOME
+
+stages:
+  - install
+  - check
+  - test
+  - build
+
+# ── Stage 1: Install ──────────────────────────────────────────────────────
+
+install:
+  stage: install
+  script:
+    - pnpm install --frozen-lockfile
+  artifacts:
+    paths:
+      - node_modules/
+      - apps/*/node_modules/
+      - packages/*/node_modules/
+    expire_in: 1 hour
+
+# ── Stage 2: Type Check ───────────────────────────────────────────────────
+
+type-check:
+  stage: check
+  needs: [install]
+  script:
+    - pnpm check-types
+  allow_failure: false
+
+# ── Stage 3: Tests ────────────────────────────────────────────────────────
+
+test:api:
+  stage: test
+  needs: [install]
+  script:
+    - pnpm --filter @grounded/api test:coverage
+  coverage: '/Lines\s*:\s*([\d.]+)%/'
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: apps/api/coverage/cobertura-coverage.xml
+    expire_in: 1 week
+
+test:web:
+  stage: test
+  needs: [install]
+  script:
+    - pnpm --filter @grounded/web test:coverage
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: apps/web/coverage/cobertura-coverage.xml
+    expire_in: 1 week
+
+# ── Stage 4: Build (main branch only) ────────────────────────────────────
+
+build:
+  stage: build
+  needs: [type-check, test:api, test:web]
+  only:
+    - main
+  script:
+    - pnpm build
+  artifacts:
+    paths:
+      - apps/web/dist/
+      - apps/api/dist/
+    expire_in: 1 week

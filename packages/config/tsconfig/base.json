@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Base TypeScript config extended by all apps and packages.
+  // Deliberately strict to catch bugs at compile time rather than runtime.
+  // Each app-specific config (react-app, node-app) extends this and adds
+  // environment-specific lib/target settings.
+  "compilerOptions": {
+    // ES2022 gives us top-level await, class fields, Error.cause etc.
+    // without requiring a polyfill-heavy target.
+    "target": "ES2022",
+    "module": "ESNext",
+    // "bundler" resolution supports package.json "exports" field — required
+    // for tRPC and modern ESM packages to resolve correctly.
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+
+    // Strict mode enables: strictNullChecks, noImplicitAny, strictFunctionTypes,
+    // strictBindCallApply, strictPropertyInitialization, noImplicitThis,
+    // alwaysStrict — all of which catch real bugs at scale.
+    "strict": true,
+    // Catches undefined when indexing arrays/objects — prevents silent bugs
+    // like deal.annotations[0].name when annotations is empty.
+    "noUncheckedIndexedAccess": true,
+    // Forces explicit 'override' keyword — prevents accidental method hiding.
+    "noImplicitOverride": true,
+    // Flag unused variables as errors — prevents dead code accumulating.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Required for Prisma, tRPC, and other libs that ship complex d.ts files.
+    "skipLibCheck": true,
+    // Emit .d.ts + sourcemaps so packages are debuggable and tree-shakeable.
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    // Required for CommonJS-to-ESM interop (e.g. importing 'express').
+    "esModuleInterop": true,
+    // Allows import of .json files (used for turbo.json, package.json reads).
+    "resolveJsonModule": true,
+    // Required for Vite/esbuild: each file must be independently transformable.
+    "isolatedModules": true,
+    // Prevents Windows/Mac case-sensitivity mismatches from causing CI failures.
+    "forceConsistentCasingInFileNames": true
+  },
+  "exclude": ["node_modules", "dist", "coverage", ".turbo"]
+}

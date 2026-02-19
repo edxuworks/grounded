@@ -1,0 +1,12 @@
+{
+  "name": "@grounded/config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Shared configuration for Grounded monorepo (TypeScript, ESLint, Vitest)",
+  "exports": {
+    "./tsconfig/base": "./tsconfig/base.json",
+    "./tsconfig/react-app": "./tsconfig/react-app.json",
+    "./tsconfig/node-app": "./tsconfig/node-app.json",
+    "./tsconfig/node-lib": "./tsconfig/node-lib.json"
+  }
+}

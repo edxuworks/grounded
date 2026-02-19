@@ -1,0 +1,52 @@
+{
+  "name": "@grounded/db",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Prisma schema, migrations, and generated client for Grounded v2",
+  "scripts": {
+
+
+    "db:generate": "prisma generate",
+
+
+    "db:push": "prisma db push",
+
+
+    "db:migrate": "prisma migrate dev",
+
+
+    "db:migrate:deploy": "prisma migrate deploy",
+
+    "db:studio": "prisma studio",
+
+    "db:seed": "tsx src/seed.ts",
+    "build": "tsc && cp -r src/generated dist/",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./dist/generated/client": {
+      "types": "./dist/generated/client/index.d.ts"
+    },
+    "./dist/generated/client/runtime/library": {
+      "types": "./dist/generated/client/runtime/library.d.ts"
+    }
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1"
+  },
+  "devDependencies": {
+    "@grounded/config": "workspace:*",
+    "@types/node": "^22.10.5",
+    "prisma": "^6.2.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}

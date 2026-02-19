@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Extends the base config with browser-specific settings.
+  // Used by apps/web — adds DOM libs and JSX transform.
+  "extends": "./base.json",
+  "compilerOptions": {
+    // DOM + DOM.Iterable gives access to browser APIs (window, document,
+    // fetch, etc.) while ES2022 gives modern JS APIs.
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // react-jsx uses the new automatic JSX transform (React 17+), removing
+    // the need to import React in every file.
+    "jsx": "react-jsx",
+    // Allow default imports from modules with no explicit default export.
+    // Required for some legacy packages (e.g. mapbox-gl).
+    "allowSyntheticDefaultImports": true
+  }
+}

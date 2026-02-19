@@ -1,0 +1,18 @@
+{
+  "extends": "@grounded/config/tsconfig/react-app",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "types": ["vite/client"],
+    // Vite handles bundling and emitting — tsc is used only for type-checking.
+    // Disabling declarations prevents TS2742 "cannot be named" errors that
+    // occur when tRPC types reference internal API types.
+    "declaration": false,
+    "declarationMap": false,
+    "paths": {
+      // '@/' alias must match vite.config.ts resolve.alias for IDE support.
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules", "dist"]
+}

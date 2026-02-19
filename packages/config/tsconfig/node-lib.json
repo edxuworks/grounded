@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Extends base config for shared library packages (packages/db, packages/types).
+  // These packages emit .d.ts files consumed by both apps/api and apps/web,
+  // so they must be compatible with both Node and bundler module resolution.
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    // ESNext module + bundler resolution ensures the emitted package works
+    // whether imported by Vite (web) or tsx/ts-node (api).
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // Composite enables project references — allows incremental builds
+    // so Turborepo only rebuilds this package when its source changes.
+    "composite": true
+  }
+}

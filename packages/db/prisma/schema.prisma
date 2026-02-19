@@ -1,0 +1,335 @@
+// =============================================================================
+// Grounded v2 — Prisma Schema
+// =============================================================================
+// Single source of truth for the database structure.
+// Run `pnpm db:generate` after any change to update the generated client.
+// Run `pnpm db:migrate` to create a tracked migration for staging/production.
+// Run `pnpm db:push` in local development for quick schema prototyping.
+//
+// Key design decisions:
+//  1. Multi-tenancy via Workspaces — every entity is scoped to a workspace_id.
+//     This is set from day 1 to avoid a painful migration later.
+//  2. Coordinates stored as Float lon/lat (not a PostGIS geometry column) so
+//     Prisma can read/write them natively. A raw SQL migration adds a PostGIS
+//     GEOMETRY column and GIST index for future geo-proximity queries.
+//  3. Custom deal fields use a two-table approach:
+//     - DealFieldDefinition: the workspace's "schema" (name, type, order)
+//     - Deal.fieldValues (Json): the per-deal values keyed by definition ID
+//     This avoids EAV (entity-attribute-value) joins while staying flexible.
+//  4. Annotation geometry stored as Json (GeoJSON Polygon) — PostGIS GEOMETRY
+//     index added via raw SQL migration in prisma/migrations/.
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  // postgresqlExtensions preview feature enables PostGIS via Prisma
+  previewFeatures = ["postgresqlExtensions"]
+  output          = "../src/generated/client"
+}
+
+datasource db {
+  provider   = "postgresql"
+  // DATABASE_URL: Supabase pooler (pgBouncer port 6543) — used for all app queries.
+  url        = env("DATABASE_URL")
+  // DATABASE_DIRECT_URL: Direct connection (port 5432) — used by Prisma migrate only.
+  // pgBouncer does not support the protocol Prisma needs for migrations.
+  directUrl  = env("DATABASE_DIRECT_URL")
+  // PostGIS extension required for geospatial operations.
+  // Must be pre-installed on the Supabase instance (it is by default).
+  extensions = [postgis]
+}
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+// Roles within a workspace. OWNER is the creator and cannot be removed.
+// ADMIN can manage members. MEMBER can create/edit. VIEWER is read-only.
+enum WorkspaceMemberRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+// The deal pipeline stages. Order matches the typical investment lifecycle:
+// Sourcing → Underwriting → Legals → Planning → Approved/Rejected
+// Colour-coding is handled in the frontend — not stored here to keep UI logic
+// separate from data.
+enum DealStatus {
+  SOURCING
+  UNDERWRITING
+  LEGALS
+  PLANNING
+  APPROVED
+  REJECTED
+}
+
+// The type of a custom field on a deal card.
+// Kept deliberately narrow for MVP; extend with BOOLEAN, SELECT etc. later
+// by adding a new enum value — no other schema changes required (OCP).
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+}
+
+// Annotation categories for spatial drawings on the map.
+// Each category gets a distinct colour in the UI (frontend concern).
+// Extending categories only requires adding a new enum value here and a
+// corresponding colour/label in the frontend constants file (OCP).
+enum AnnotationCategory {
+  // Physical access routes, entrances, transport links
+  ACCESS
+  // Parks, open space, landscaping nearby
+  GREEN_SPACE
+  // Competing hospitality or retail venues in proximity
+  COMPETITOR
+  // Demand drivers: offices, stadiums, universities etc.
+  DEMAND_GENERATOR
+  // Environmental or safety hazards (flood risk, noise, contamination)
+  HAZARD
+  // Planning, financial, or political risk areas
+  RISK_ZONE
+  // Committed or proposed new developments nearby
+  NEW_PROJECT
+}
+
+// =============================================================================
+// Users
+// =============================================================================
+
+// Mirrors Supabase auth.users. We do NOT store passwords here — Supabase Auth
+// manages authentication entirely. This table holds display/profile data.
+// The id matches the UUID from auth.users so we can do efficient FK lookups
+// without a join to the auth schema.
+model User {
+  id        String   @id
+  // Email is denormalised here for quick lookups (e.g. workspace invite emails).
+  email     String   @unique
+  fullName  String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations — used by Prisma to generate type-safe include/select queries.
+  workspaceMemberships WorkspaceMember[]
+  createdDeals         Deal[]
+  createdDealFiles     DealFile[]
+  createdAnnotations   Annotation[]
+  comments             Comment[]
+
+  @@map("users")
+}
+
+// =============================================================================
+// Workspaces
+// =============================================================================
+
+// A workspace represents a team or company account. All data (deals, files,
+// annotations) is scoped to a workspace. A user can belong to multiple
+// workspaces (e.g. a consultant working across firms).
+model Workspace {
+  id   String @id @default(cuid())
+  name String
+  // Slug is used in URLs: app.grounded.io/<slug>/map
+  // Must be URL-safe. Validated with Zod on the API layer.
+  slug String @unique
+  // Plan tier: 'free' | 'pro' | 'enterprise'
+  // Feature gating is done in the API layer — not stored as an enum so it can
+  // be extended without a migration.
+  plan      String   @default("free")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members          WorkspaceMember[]
+  dealFiles        DealFile[]
+  deals            Deal[]
+  fieldDefinitions DealFieldDefinition[]
+  annotations      Annotation[]
+  comments         Comment[]
+
+  @@map("workspaces")
+}
+
+// Join table for the many-to-many User ↔ Workspace relationship.
+// Includes the role so we can enforce RBAC at the API middleware level.
+model WorkspaceMember {
+  id          String              @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceMemberRole @default(MEMBER)
+  joinedAt    DateTime            @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // A user can only be a member of a workspace once.
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+// =============================================================================
+// Deal Field Definitions
+// =============================================================================
+
+// Defines the custom "schema" for deal cards in a workspace.
+// E.g. a workspace might define: "Purchase Price" (NUMBER), "Owner" (TEXT),
+// "Target Completion" (DATE). Each workspace has its own independent schema.
+// The actual values are stored as JSONB on the Deal model.
+//
+// Why not fixed columns on Deal?
+//   - Fixed columns require a migration for every new field type
+//   - Different workspaces want different fields
+//   - This approach is open for extension without modifying the schema (OCP)
+model DealFieldDefinition {
+  id          String    @id @default(cuid())
+  workspaceId String
+  // Human-readable name shown in the UI deal card, e.g. "Purchase Price".
+  name        String
+  // Controls which input widget the UI renders (text input, number, date picker).
+  fieldType   FieldType
+  // Zero-indexed order for rendering fields in the deal sidebar.
+  // Updated by the fieldDef.reorder tRPC procedure.
+  displayOrder Int      @default(0)
+  isRequired   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, displayOrder])
+  @@map("deal_field_definitions")
+}
+
+// =============================================================================
+// Deal Files (Folders)
+// =============================================================================
+
+// A DealFile is a named collection of deals — analogous to a project folder
+// or investment thesis. One DealFile might be "King's Cross Portfolio" or
+// "2025 Acquisitions Pipeline".
+// Each DealFile appears as a separate toggle-able layer on the map.
+model DealFile {
+  id          String  @id @default(cuid())
+  workspaceId String
+  name        String
+  description String?
+  // Hex colour used for markers and the layer toggle in the UI.
+  color       String  @default("#3b82f6")
+  createdById String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+  deals     Deal[]
+
+  @@index([workspaceId])
+  @@map("deal_files")
+}
+
+// =============================================================================
+// Deals
+// =============================================================================
+
+// A Deal represents a single real estate asset under consideration.
+// It has a physical location (coordinates), a pipeline status, and a flexible
+// set of field values defined by the workspace's DealFieldDefinitions.
+model Deal {
+  id          String     @id @default(cuid())
+  dealFileId  String
+  workspaceId String
+  title       String
+  address     String
+  // Storing lat/lng as separate Float columns so Prisma can read/write them
+  // natively. A raw SQL migration (see prisma/migrations/) adds a PostGIS
+  // GEOMETRY(Point, 4326) column 'coordinates' with a GIST index for
+  // efficient geo-proximity queries when we need them.
+  longitude   Float
+  latitude    Float
+  status      DealStatus @default(SOURCING)
+
+  // JSONB column storing field values keyed by DealFieldDefinition.id.
+  // Example: { "clx123abc": "Investec Bank", "clx456def": 12500000 }
+  // This allows flexible per-workspace schemas without EAV join complexity.
+  // Validated against the workspace's field definitions at the API layer.
+  fieldValues Json       @default("{}")
+
+  // Pinned deals appear in the dashboard pipeline table view.
+  pinned      Boolean    @default(false)
+  createdById String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  dealFile    DealFile     @relation(fields: [dealFileId], references: [id], onDelete: Cascade)
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  annotations Annotation[]
+  comments    Comment[]
+
+  // Composite index: most queries are workspace-scoped deal lists.
+  @@index([workspaceId, dealFileId])
+  @@index([workspaceId, status])
+  @@map("deals")
+}
+
+// =============================================================================
+// Annotations
+// =============================================================================
+
+// Spatial drawings associated with a deal — polygons drawn on the map
+// to mark areas of interest (e.g. risk zones, green space, access routes).
+// Each annotation belongs to exactly one deal.
+model Annotation {
+  id          String             @id @default(cuid())
+  dealId      String
+  workspaceId String
+  name        String
+  description String?
+  category    AnnotationCategory
+
+  // GeoJSON Polygon stored as Json.
+  // Shape: { "type": "Polygon", "coordinates": [[[lng, lat], ...]] }
+  // A raw SQL migration adds a PostGIS GEOMETRY(Polygon, 4326) column
+  // with a GIST index for spatial intersection queries in future features
+  // (e.g. "show all deals near this noise zone").
+  geometry    Json
+
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  deal      Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@index([dealId])
+  @@map("annotations")
+}
+
+// =============================================================================
+// Comments
+// =============================================================================
+
+// Stakeholder collaboration comments on a deal.
+// Each comment is authored by a User — the author's workspace role
+// is inferred at query time from the WorkspaceMember join, not duplicated here.
+model Comment {
+  id          String   @id @default(cuid())
+  dealId      String
+  workspaceId String
+  authorId    String
+  text        String
+  createdAt   DateTime @default(now())
+  // Comments are not editable in MVP — editing requires an audit log (v2+).
+  updatedAt   DateTime @updatedAt
+
+  deal      Deal      @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@index([dealId, createdAt])
+  @@map("comments")
+}
