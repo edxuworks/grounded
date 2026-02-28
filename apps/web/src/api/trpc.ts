@@ -68,19 +68,21 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: apiBaseUrl,
       // Attach the Supabase JWT to every request's Authorization header.
-      // This async function is called before each HTTP request.
+      // Wrapped in try/catch: in dev (DEV_BYPASS_AUTH=true) there is no
+      // Supabase session, so getSession() may throw. We fall back to no
+      // auth header and let the backend DEV_BYPASS_AUTH handle it.
       async headers() {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
 
-        if (!session?.access_token) {
+          if (!session?.access_token) return {};
+
+          return { Authorization: `Bearer ${session.access_token}` };
+        } catch {
           return {};
         }
-
-        return {
-          Authorization: `Bearer ${session.access_token}`,
-        };
       },
     }),
   ],

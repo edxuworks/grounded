@@ -180,4 +180,47 @@ export const workspaceRouter = router({
         orderBy: { joinedAt: "asc" },
       });
     }),
+
+  /**
+   * Dev-only: returns the shared "playground" workspace, creating it if it
+   * doesn't exist and ensuring the current dev user is a member.
+   *
+   * All devs who run with DEV_BYPASS_AUTH=true share this one workspace so
+   * data (deals, annotations, etc.) persists and stays in sync across sessions.
+   *
+   * Throws FORBIDDEN if called outside of dev bypass mode.
+   */
+  getPlayground: protectedProcedure.query(async ({ ctx }) => {
+    if (process.env["DEV_BYPASS_AUTH"] !== "true") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "getPlayground is only available when DEV_BYPASS_AUTH=true.",
+      });
+    }
+
+    // Upsert the playground workspace — idempotent, safe to call every time.
+    const workspace = await ctx.db.workspace.upsert({
+      where: { slug: "playground" },
+      create: { name: "Playground", slug: "playground" },
+      update: {},
+    });
+
+    // Ensure the dev user is a member (idempotent).
+    await ctx.db.workspaceMember.upsert({
+      where: {
+        workspaceId_userId: {
+          workspaceId: workspace.id,
+          userId: ctx.user.id,
+        },
+      },
+      create: {
+        workspaceId: workspace.id,
+        userId: ctx.user.id,
+        role: "OWNER",
+      },
+      update: {},
+    });
+
+    return { ...workspace, myRole: "OWNER" as const };
+  }),
 });

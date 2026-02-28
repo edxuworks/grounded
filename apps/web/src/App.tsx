@@ -3,50 +3,71 @@
  *
  * The top-level component that wires together:
  *  1. tRPC provider (provides the tRPC hooks and React Query context)
- *  2. AuthGuard (redirects to login if no session)
- *  3. WorkspaceProvider (ensures an active workspace is selected)
- *  4. The main map application shell
+ *  2. AppShell (routes between WorkspaceDashboard and MapShell)
  *
  * Component tree:
- *   <App>                     — providers only
- *     <AuthGuard>             — shows LoginPage if not authenticated
- *       <WorkspaceProvider>   — shows workspace picker on first login
- *         <MapShell>          — the actual app (map + panels)
+ *   <App>                       — providers only
+ *     <AppShell>                — view routing (dashboard ↔ map)
+ *       <WorkspaceDashboard>    — workspace selection / creation landing page
+ *       OR
+ *       <WorkspaceProvider>     — provides workspace context to map
+ *         <MapShell>            — the actual app (map + panels)
  *
- * WHY not use a router (React Router)?
- * The Grounded MVP is a single-screen application — the map IS the app.
- * There are no separate pages to navigate between. A router adds complexity
- * and bundle size for no benefit at this stage. We can add one in v2+
- * if we need a settings page, public deal sharing URLs, etc.
+ * No auth required in dev phase — DEV_BYPASS_AUTH=true in apps/api/.env
+ * injects a dev user server-side so all tRPC calls work without a JWT.
  */
 
+import { useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { trpc, trpcClient, queryClient } from "@/api/trpc";
-import { AuthGuard } from "@/features/auth/AuthGuard";
 import { WorkspaceProvider } from "@/features/workspace/WorkspaceProvider";
+import { WorkspaceDashboard } from "@/features/workspace/WorkspaceDashboard";
 import { MapShell } from "@/components/MapShell";
+import { useUIStore } from "@/store/useUIStore";
+
+const WORKSPACE_KEY = "grounded:activeWorkspaceId";
 
 export function App() {
   return (
-    // tRPC provider must wrap everything that uses tRPC hooks.
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      {/* React Query provider must be inside tRPC provider */}
       <QueryClientProvider client={queryClient}>
-        {/* Auth gate — shows LoginPage if not authenticated */}
-        <AuthGuard>
-          {/* Workspace gate — shows workspace picker on first login */}
-          <WorkspaceProvider>
-            {/* The main app shell: map + floating panels */}
-            <MapShell />
-          </WorkspaceProvider>
-        </AuthGuard>
+        <AppShell />
 
-        {/* React Query DevTools — only rendered in development builds */}
         {import.meta.env.DEV && (
           <ReactQueryDevtools initialIsOpen={false} position="bottom" />
         )}
       </QueryClientProvider>
     </trpc.Provider>
+  );
+}
+
+/**
+ * AppShell — Routes between the dashboard and the map.
+ *
+ * On first render, restores the last active workspace from localStorage.
+ * If a workspace ID is saved, the map view opens directly (skips dashboard).
+ * Otherwise the dashboard is shown so the user can pick or create a workspace.
+ */
+function AppShell() {
+  const { activeWorkspaceId, setActiveWorkspaceId } = useUIStore();
+
+  // Restore the last workspace from localStorage on first render.
+  useEffect(() => {
+    if (!activeWorkspaceId) {
+      const saved = localStorage.getItem(WORKSPACE_KEY);
+      if (saved) setActiveWorkspaceId(saved);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!activeWorkspaceId) {
+    return <WorkspaceDashboard />;
+  }
+
+  return (
+    <WorkspaceProvider>
+      <MapShell />
+    </WorkspaceProvider>
   );
 }

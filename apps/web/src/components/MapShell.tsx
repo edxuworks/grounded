@@ -26,8 +26,9 @@
  */
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { Upload, ChevronLeft } from "lucide-react";
 import { useUIStore } from "@/store/useUIStore";
+import { useWorkspace } from "@/features/workspace/WorkspaceProvider";
 import { MapCanvas } from "@/components/map/MapCanvas";
 import { LeftPanel } from "@/components/left-panel/LeftPanel";
 import { DealSidebar } from "@/components/sidebar/DealSidebar";
@@ -35,9 +36,17 @@ import { LayerControl } from "@/components/map/LayerControl";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { UploadOMModal } from "@/components/upload/UploadOMModal";
 
+const WORKSPACE_KEY = "grounded:activeWorkspaceId";
+
 export function MapShell() {
-  const { sidebarOpen, leftPanelOpen, setPreviewPin } = useUIStore();
+  const { sidebarOpen, leftPanelOpen, setPreviewPin, setActiveWorkspaceId } = useUIStore();
+  const { workspaceName } = useWorkspace();
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  const handleBackToDashboard = () => {
+    localStorage.removeItem(WORKSPACE_KEY);
+    setActiveWorkspaceId(null);
+  };
 
   return (
     // Full-screen relative container. All child panels are positioned absolutely.
@@ -70,19 +79,28 @@ export function MapShell() {
         </div>
       )}
 
-      {/* Floating action button: toggle left panel */}
-      <button
-        onClick={() =>
-          leftPanelOpen
-            ? useUIStore.getState().closeLeftPanel()
-            : useUIStore.getState().openLeftPanel()
-        }
-        className="absolute top-4 left-4 z-20 w-10 h-10 bg-land-panel hover:bg-land-surface border border-white/10 rounded-lg flex items-center justify-center text-land-text transition-colors shadow-lg"
-        title="Toggle panel"
-        style={{ display: leftPanelOpen ? "none" : "flex" }}
-      >
-        ☰
-      </button>
+      {/* Top-left controls: back to workspaces + toggle panel */}
+      {!leftPanelOpen && (
+        <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+          {/* Back to workspace dashboard */}
+          <button
+            onClick={handleBackToDashboard}
+            className="flex items-center gap-1.5 h-10 px-3 bg-land-panel hover:bg-land-surface border border-white/10 rounded-lg text-land-muted hover:text-land-text transition-colors shadow-lg text-xs font-medium"
+            title="Back to workspaces"
+          >
+            <ChevronLeft size={13} />
+            {workspaceName}
+          </button>
+          {/* Toggle left panel */}
+          <button
+            onClick={() => useUIStore.getState().openLeftPanel()}
+            className="w-10 h-10 bg-land-panel hover:bg-land-surface border border-white/10 rounded-lg flex items-center justify-center text-land-text transition-colors shadow-lg"
+            title="Toggle panel"
+          >
+            ☰
+          </button>
+        </div>
+      )}
 
       {/* Upload OM button — bottom-left floating */}
       <button
