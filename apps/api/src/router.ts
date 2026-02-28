@@ -14,6 +14,8 @@
  *  trpc.comment.listByDeal.useQuery({ dealId, workspaceId })
  *  trpc.fieldDef.reorder.useMutation()
  *  trpc.mapbox.queryTransportPOI.useQuery({ longitude, latitude })
+ *  trpc.document.analyzeDocument.useMutation()
+ *  trpc.document.geocodeAddress.useMutation()
  *
  * Adding a new domain:
  *  1. Create src/routers/newDomain.ts
@@ -30,6 +32,7 @@ import { dealRouter } from "@/routers/deal";
 import { annotationRouter } from "@/routers/annotation";
 import { commentRouter } from "@/routers/comment";
 import { mapboxRouter } from "@/routers/mapbox";
+import { documentRouter } from "@/routers/document";
 
 export const appRouter = router({
   auth: authRouter,
@@ -40,6 +43,7 @@ export const appRouter = router({
   annotation: annotationRouter,
   comment: commentRouter,
   mapbox: mapboxRouter,
+  document: documentRouter,
 });
 
 /**

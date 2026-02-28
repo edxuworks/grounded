@@ -36,7 +36,7 @@ type FormValues = z.infer<typeof FormSchema>;
 
 export function CreateDealForm() {
   const { activeWorkspaceId } = useWorkspace();
-  const { pendingPin, setPendingPin, setLeftPanelMode, openSidebar } = useUIStore();
+  const { pendingPin, setPendingPin, setLeftPanelMode, openSidebar, pendingAddress, setPendingAddress } = useUIStore();
 
   // Fetch deal files to populate the "save to" select.
   const { data: dealFiles } = trpc.dealFile.list.useQuery(
@@ -48,8 +48,9 @@ export function CreateDealForm() {
     onSuccess: (deal: { id: string }) => {
       // Refresh the deal list so the map marker appears immediately.
       queryClient.invalidateQueries({ queryKey: [["deal", "list"]] });
-      // Clear the pending pin, switch panel to deal files, open the new deal sidebar.
+      // Clear the pending pin + pre-filled address, switch panel, open new deal sidebar.
       setPendingPin(null);
+      setPendingAddress(null);
       setLeftPanelMode("deal-files");
       openSidebar(deal.id);
     },
@@ -62,6 +63,8 @@ export function CreateDealForm() {
   } = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
+      // Pre-fill address from OM upload if available, otherwise empty.
+      address: pendingAddress ?? "",
       // Pre-select the first deal file if one exists.
       dealFileId: dealFiles?.[0]?.id ?? "",
     },
@@ -81,6 +84,7 @@ export function CreateDealForm() {
 
   const handleCancel = () => {
     setPendingPin(null);
+    setPendingAddress(null);
     setLeftPanelMode("deal-files");
   };
 
@@ -129,6 +133,9 @@ export function CreateDealForm() {
         <div>
           <label className="block text-xs font-medium text-land-text mb-1">
             Address <span className="text-red-400">*</span>
+            {pendingAddress && (
+              <span className="ml-2 text-emerald-400 font-normal">· AI extracted</span>
+            )}
           </label>
           <input
             {...register("address")}

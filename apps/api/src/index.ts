@@ -49,7 +49,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Increased limit to support base64-encoded PDF uploads (OMs can be 20-30MB → ~40MB as base64).
+app.use(express.json({ limit: "50mb" }));
 
 // ── Health check ──────────────────────────────────────────────────────────
 // Used by Railway/Render health checks and uptime monitors.

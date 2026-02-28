@@ -1,34 +1,27 @@
 /**
  * MapCanvas — Full-Screen Mapbox GL Map
  *
- * The primary visual surface of the application. Renders:
- *  1. The Mapbox base map (satellite/streets tiles)
- *  2. Deal markers (one per deal, positioned at deal coordinates)
- *  3. Annotation polygons (GeoJSON layers for the active deal)
- *  4. Optional data layers (transport POI — toggled via LayerControl)
- *  5. Drawing mode overlay (when annotation drawing is active)
+ * Renders the base map, deal markers, annotation polygons, and (Phase 7)
+ * transport POI layers.
  *
  * Click handling:
- *  - Click on empty map → sets a pending pin + opens the create deal form
- *  - Click on a deal marker → opens the deal sidebar
- *  - Click on an annotation → shows the annotation detail popup
- *
- * The map instance is obtained via useRef so we can call map.flyTo()
- * imperatively when flyToTarget changes in the UI store.
- *
- * Phase 4: DealMarkers ✓
- * Phase 6: AnnotationLayer — pending
- * Phase 7: TransportPOILayer — pending
+ *  - Drawing active → adds a polygon vertex to useDrawingStore
+ *  - Otherwise      → sets a pending pin + opens the create deal form
+ *  - Annotation polygon clicked → selects the annotation in UIStore
  */
 
 import { useCallback, useEffect, useRef } from "react";
 import Map, { type MapRef } from "react-map-gl";
+import type { MapLayerMouseEvent } from "react-map-gl";
 import { useUIStore } from "@/store/useUIStore";
+import { useDrawingStore } from "@/store/useDrawingStore";
 import { DealMarkers } from "@/components/map/DealMarker";
+import { AnnotationLayer, ANNOTATION_FILL_LAYER_ID } from "@/components/map/AnnotationLayer";
+import { TransportPOILayer } from "@/components/map/TransportPOILayer";
+import { PreviewPinMarker } from "@/components/map/PreviewPinMarker";
 
 const MAPBOX_TOKEN = import.meta.env["VITE_MAPBOX_PUBLIC_TOKEN"] as string | undefined;
 
-// Default view: central London
 const DEFAULT_VIEW = {
   longitude: -0.1276,
   latitude: 51.5074,
@@ -37,20 +30,37 @@ const DEFAULT_VIEW = {
 
 export function MapCanvas() {
   const mapRef = useRef<MapRef>(null);
-  const { setPendingPin, openLeftPanel, flyToTarget, setFlyToTarget } = useUIStore();
+  const {
+    setPendingPin,
+    openLeftPanel,
+    flyToTarget,
+    setFlyToTarget,
+    selectAnnotation,
+    transportPOIEnabled,
+    previewPin,
+  } = useUIStore();
+  const { isDrawing, addPoint, currentPoints } = useDrawingStore();
 
-  // When the user clicks an empty area of the map, set a pending pin
-  // and open the left panel in "create deal" mode.
   const handleMapClick = useCallback(
-    (event: { lngLat: { lng: number; lat: number } }) => {
+    (event: MapLayerMouseEvent) => {
+      if (isDrawing) {
+        addPoint([event.lngLat.lng, event.lngLat.lat]);
+        return;
+      }
+      // If the click hit an annotation polygon, select it instead of creating a deal.
+      const annotationId = event.features?.find(
+        (f) => f.layer?.id === ANNOTATION_FILL_LAYER_ID
+      )?.properties?.id as string | undefined;
+      if (annotationId) {
+        selectAnnotation(annotationId);
+        return;
+      }
       setPendingPin({ longitude: event.lngLat.lng, latitude: event.lngLat.lat });
       openLeftPanel("create-deal");
     },
-    [setPendingPin, openLeftPanel]
+    [isDrawing, addPoint, selectAnnotation, setPendingPin, openLeftPanel]
   );
 
-  // Respond to flyToTarget changes from the UI store.
-  // useEffect (not onLoad) so flyTo works after the map is loaded, not just on initial load.
   useEffect(() => {
     if (flyToTarget && mapRef.current) {
       mapRef.current.flyTo({
@@ -62,9 +72,16 @@ export function MapCanvas() {
     }
   }, [flyToTarget, setFlyToTarget]);
 
-  const handleMapLoad = useCallback(() => {
-    // Map is ready — any post-load setup can go here.
-  }, []);
+  // Fly to preview pin when it is first set (after OM analysis).
+  useEffect(() => {
+    if (previewPin && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [previewPin.longitude, previewPin.latitude],
+        zoom: 15,
+        duration: 1200,
+      });
+    }
+  }, [previewPin]);
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -80,19 +97,28 @@ export function MapCanvas() {
   }
 
   return (
-    <Map
-      ref={mapRef}
-      mapboxAccessToken={MAPBOX_TOKEN}
-      initialViewState={DEFAULT_VIEW}
-      style={{ width: "100%", height: "100%" }}
-      mapStyle="mapbox://styles/mapbox/dark-v11"
-      onClick={handleMapClick}
-      onLoad={handleMapLoad}
-    >
-      {/* Each child component subscribes to its own query — SRP. */}
-      <DealMarkers />
-      {/* AnnotationLayer added in Phase 6 */}
-      {/* TransportPOILayer added in Phase 7 */}
-    </Map>
+    <div className="relative w-full h-full">
+      <Map
+        ref={mapRef}
+        mapboxAccessToken={MAPBOX_TOKEN}
+        initialViewState={DEFAULT_VIEW}
+        style={{ width: "100%", height: "100%" }}
+        mapStyle="mapbox://styles/mapbox/dark-v11"
+        onClick={handleMapClick}
+        cursor={isDrawing ? "crosshair" : "grab"}
+        interactiveLayerIds={[ANNOTATION_FILL_LAYER_ID]}
+      >
+        <DealMarkers />
+        <AnnotationLayer />
+        {transportPOIEnabled && <TransportPOILayer />}
+        <PreviewPinMarker />
+      </Map>
+
+      {isDrawing && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-land-surface/90 border border-land-accent/40 rounded-full text-xs text-land-text backdrop-blur-sm pointer-events-none">
+          Click to place vertices ({currentPoints.length} placed) — click Finish in the Annotations tab
+        </div>
+      )}
+    </div>
   );
 }

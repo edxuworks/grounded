@@ -11,6 +11,7 @@ import { X } from "lucide-react";
 import { useUIStore } from "@/store/useUIStore";
 import { DealFileManager } from "@/components/left-panel/DealFileManager";
 import { CreateDealForm } from "@/components/left-panel/CreateDealForm";
+import { FieldDefManager } from "@/components/sidebar/FieldDefManager";
 
 export function LeftPanel() {
   const { leftPanelMode, setLeftPanelMode, closeLeftPanel } = useUIStore();
@@ -45,13 +46,7 @@ export function LeftPanel() {
       <div className="p-4 max-h-[calc(100vh-120px)] overflow-y-auto styled-scrollbar">
         {leftPanelMode === "deal-files" && <DealFileManager />}
         {leftPanelMode === "create-deal" && <CreateDealForm />}
-        {leftPanelMode === "field-settings" && (
-          <div className="text-land-muted text-sm text-center py-8">
-            {/* FieldDefManager — Phase 5 */}
-            <p>Custom field settings</p>
-            <p className="text-xs mt-1 opacity-60">Coming in Phase 5</p>
-          </div>
-        )}
+        {leftPanelMode === "field-settings" && <FieldDefManager />}
       </div>
     </div>
   );

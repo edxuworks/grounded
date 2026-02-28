@@ -19,6 +19,12 @@ import { create } from "zustand";
 
 export type DrawingTool = "polygon" | "rectangle" | null;
 
+/** Minimal GeoJSON Polygon type (avoids importing the full types package). */
+export interface DrawnPolygon {
+  type: "Polygon";
+  coordinates: [number, number][][];
+}
+
 interface DrawingStore {
   /** Currently active drawing tool, or null when not drawing */
   activeTool: DrawingTool;
@@ -29,26 +35,36 @@ interface DrawingStore {
   /**
    * In-progress coordinate array for the polygon being drawn.
    * Each point is [longitude, latitude] (GeoJSON order).
-   * Used by the DrawingToolbar to show a "points placed" count.
    */
   currentPoints: [number, number][];
 
   /** True while the user is actively placing points */
   isDrawing: boolean;
 
+  /**
+   * Set when the user clicks "Finish" with ≥ 3 points.
+   * Read by AnnotationPanel to show the save form. Cleared after saving.
+   */
+  completedPolygon: DrawnPolygon | null;
+
   // ── Actions ──────────────────────────────────────────────────────────────
 
   startDrawing: (tool: DrawingTool, dealId: string) => void;
   addPoint: (point: [number, number]) => void;
+  /** Finalise the in-progress drawing into completedPolygon. */
   finishDrawing: () => void;
+  /** Cancel in-progress drawing without saving. */
   cancelDrawing: () => void;
+  /** Clear completedPolygon after annotation has been saved. */
+  clearCompleted: () => void;
 }
 
-export const useDrawingStore = create<DrawingStore>((set) => ({
+export const useDrawingStore = create<DrawingStore>((set, get) => ({
   activeTool: null,
   activeDealId: null,
   currentPoints: [],
   isDrawing: false,
+  completedPolygon: null,
 
   startDrawing: (tool, dealId) =>
     set({
@@ -56,6 +72,7 @@ export const useDrawingStore = create<DrawingStore>((set) => ({
       activeDealId: dealId,
       currentPoints: [],
       isDrawing: true,
+      completedPolygon: null,
     }),
 
   addPoint: (point) =>
@@ -63,15 +80,21 @@ export const useDrawingStore = create<DrawingStore>((set) => ({
       currentPoints: [...state.currentPoints, point],
     })),
 
-  finishDrawing: () =>
+  finishDrawing: () => {
+    const { currentPoints, activeDealId } = get();
+    if (currentPoints.length < 3) return; // Need at least 3 points for a polygon
+
+    // Close the ring: first point repeated at end (GeoJSON spec).
+    const ring: [number, number][] = [...currentPoints, currentPoints[0]!];
     set({
-      // Keep activeDealId intact — the parent component reads it to know
-      // which deal the completed geometry should be saved to, then calls
-      // cancelDrawing() to reset after saving.
       activeTool: null,
       currentPoints: [],
       isDrawing: false,
-    }),
+      // activeDealId kept so AnnotationPanel knows which deal to save to.
+      activeDealId,
+      completedPolygon: { type: "Polygon", coordinates: [ring] },
+    });
+  },
 
   cancelDrawing: () =>
     set({
@@ -79,5 +102,12 @@ export const useDrawingStore = create<DrawingStore>((set) => ({
       activeDealId: null,
       currentPoints: [],
       isDrawing: false,
+      completedPolygon: null,
+    }),
+
+  clearCompleted: () =>
+    set({
+      completedPolygon: null,
+      activeDealId: null,
     }),
 }));

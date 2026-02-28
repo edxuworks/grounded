@@ -10,9 +10,11 @@
 
 import { useState } from "react";
 import { Layers } from "lucide-react";
+import { useUIStore } from "@/store/useUIStore";
 
 export function LayerControl() {
   const [isOpen, setIsOpen] = useState(false);
+  const { transportPOIEnabled, setTransportPOIEnabled } = useUIStore();
 
   return (
     <div className="relative">
@@ -29,9 +31,11 @@ export function LayerControl() {
           <p className="text-xs font-medium text-land-muted uppercase tracking-wider px-1">
             Map Layers
           </p>
-          {/* Transport POI layer — Phase 7 */}
-          <LayerToggle label="Transport POI" disabled />
-          {/* Additional layers will be added here */}
+          <LayerToggle
+            label="Transport POI"
+            checked={transportPOIEnabled}
+            onChange={setTransportPOIEnabled}
+          />
         </div>
       )}
     </div>

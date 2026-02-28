@@ -14,8 +14,6 @@
     "clean": "rm -rf dist"
   },
   "main": "./dist/index.js",
-
-
   "types": "./dist/router.d.ts",
   "exports": {
     ".": {
@@ -23,6 +21,7 @@
     }
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@grounded/db": "workspace:*",
     "@grounded/types": "workspace:*",
     "@supabase/supabase-js": "^2.48.1",

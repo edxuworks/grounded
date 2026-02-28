@@ -13,12 +13,18 @@
 import { useAuth } from "./useAuth";
 import { LoginPage } from "./LoginPage";
 
+// Set VITE_DEV_BYPASS_AUTH=true in apps/web/.env to skip login during development.
+const DEV_BYPASS = import.meta.env["VITE_DEV_BYPASS_AUTH"] === "true";
+
 interface AuthGuardProps {
   children: React.ReactNode;
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { user, isLoading } = useAuth();
+
+  // Dev bypass: skip auth entirely — never enabled in production builds.
+  if (DEV_BYPASS) return <>{children}</>;
 
   if (isLoading) {
     return (

@@ -22,6 +22,13 @@ interface MapCoordinates {
   zoom?: number;
 }
 
+interface PreviewPin {
+  longitude: number;
+  latitude: number;
+  /** Full formatted address extracted from the OM */
+  address: string;
+}
+
 interface UIStore {
   // ── Panel visibility ─────────────────────────────────────────────────────
 
@@ -41,6 +48,20 @@ interface UIStore {
    * a deal, before the form is submitted. Cleared on form submit or cancel.
    */
   pendingPin: MapCoordinates | null;
+
+  /**
+   * A preview pin set after OM document analysis + geocoding.
+   * Shown as a pulsing marker on the map with a floating confirmation card.
+   * Cleared when the user saves as a deal or cancels.
+   */
+  previewPin: PreviewPin | null;
+
+  /**
+   * Address pre-filled from OM analysis — read by CreateDealForm as a
+   * default value so the user doesn't have to retype the address.
+   * Cleared after CreateDealForm mounts and reads it.
+   */
+  pendingAddress: string | null;
 
   /** The active workspace ID (persisted to localStorage by the WorkspaceProvider) */
   activeWorkspaceId: string | null;
@@ -73,11 +94,17 @@ interface UIStore {
   setLeftPanelMode: (mode: UIStore["leftPanelMode"]) => void;
 
   setPendingPin: (coords: MapCoordinates | null) => void;
+  setPreviewPin: (pin: PreviewPin | null) => void;
+  setPendingAddress: (address: string | null) => void;
   setFlyToTarget: (target: MapCoordinates | null) => void;
   setActiveWorkspaceId: (id: string | null) => void;
 
+  /** Whether the Transport POI layer is visible on the map */
+  transportPOIEnabled: boolean;
+
   selectAnnotation: (id: string | null) => void;
   toggleAnnotationCategory: (category: string) => void;
+  setTransportPOIEnabled: (enabled: boolean) => void;
 }
 
 export const useUIStore = create<UIStore>((set) => ({
@@ -88,10 +115,13 @@ export const useUIStore = create<UIStore>((set) => ({
   leftPanelMode: "deal-files",
   activeDealId: null,
   pendingPin: null,
+  previewPin: null,
+  pendingAddress: null,
   activeWorkspaceId: null,
   flyToTarget: null,
   selectedAnnotationId: null,
   hiddenAnnotationCategories: [],
+  transportPOIEnabled: false,
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -113,6 +143,12 @@ export const useUIStore = create<UIStore>((set) => ({
   setPendingPin: (coords) =>
     set({ pendingPin: coords }),
 
+  setPreviewPin: (pin) =>
+    set({ previewPin: pin }),
+
+  setPendingAddress: (address) =>
+    set({ pendingAddress: address }),
+
   setFlyToTarget: (target) =>
     set({ flyToTarget: target }),
 
@@ -121,6 +157,9 @@ export const useUIStore = create<UIStore>((set) => ({
 
   selectAnnotation: (id) =>
     set({ selectedAnnotationId: id }),
+
+  setTransportPOIEnabled: (enabled) =>
+    set({ transportPOIEnabled: enabled }),
 
   toggleAnnotationCategory: (category) =>
     set((state) => ({

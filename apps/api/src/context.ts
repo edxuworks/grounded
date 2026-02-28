@@ -44,6 +44,15 @@ export interface Context {
 export async function createContext({
   req,
 }: CreateExpressContextOptions): Promise<Context> {
+  // Dev bypass: use the first user in the DB so all workspace queries still work.
+  // Only active when DEV_BYPASS_AUTH=true in .env — never set this in production.
+  if (process.env["DEV_BYPASS_AUTH"] === "true") {
+    const devUser = await prisma.user.findFirst({ select: { id: true, email: true } });
+    if (devUser) {
+      return { db: prisma, user: { id: devUser.id, email: devUser.email } };
+    }
+  }
+
   // Extract the Bearer token from the Authorization header.
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
 
