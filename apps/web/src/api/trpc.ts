@@ -68,10 +68,12 @@ export const trpcClient = trpc.createClient({
     httpBatchLink({
       url: apiBaseUrl,
       // Attach the Supabase JWT to every request's Authorization header.
-      // Wrapped in try/catch: in dev (DEV_BYPASS_AUTH=true) there is no
-      // Supabase session, so getSession() may throw. We fall back to no
-      // auth header and let the backend DEV_BYPASS_AUTH handle it.
+      // In dev bypass mode (VITE_DEV_BYPASS_AUTH=true) skip Supabase entirely —
+      // the backend's DEV_BYPASS_AUTH injects a dev user without needing a token.
       async headers() {
+        if (import.meta.env["VITE_DEV_BYPASS_AUTH"] === "true") {
+          return {};
+        }
         try {
           const {
             data: { session },

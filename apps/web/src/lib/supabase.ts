@@ -22,13 +22,15 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
+// In dev bypass mode, disable all Supabase background operations (session storage,
+// auto-refresh, URL detection). This prevents the sb_publishable_ key format from
+// triggering internal URL-pattern errors when no real auth session exists.
+const isDev = import.meta.env["VITE_DEV_BYPASS_AUTH"] === "true";
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Store session in localStorage so the user stays logged in across page refreshes.
-    persistSession: true,
-    // Automatically refresh the JWT before it expires (15 min before expiry).
-    autoRefreshToken: true,
-    // Detect auth state changes from other browser tabs (e.g. logout in another tab).
-    detectSessionInUrl: true,
+    persistSession: !isDev,
+    autoRefreshToken: !isDev,
+    detectSessionInUrl: !isDev,
   },
 });
