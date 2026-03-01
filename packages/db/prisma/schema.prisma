@@ -310,6 +310,70 @@ model Annotation {
 }
 
 // =============================================================================
+// Postcodes (ONS Postcode Directory)
+// =============================================================================
+
+// UK postcode → coordinate + geography lookup table.
+// Populated via bulk ingest from the ONS Postcode Directory (~2.7M records).
+// Used to geocode government data (VOA, EPC, CCOD) that returns postcodes not coordinates.
+model Postcode {
+  // Normalised postcode (uppercase, no spaces) — e.g. "EC2A1NT"
+  postcode       String  @id
+  latitude       Float
+  longitude      Float
+  // Lower Layer Super Output Area — used for IMD deprivation lookups
+  lsoa           String?
+  // Middle Layer Super Output Area — used for NOMIS business counts
+  msoa           String?
+  ward           String?
+  localAuthority String?
+
+  @@index([lsoa])
+  @@index([msoa])
+  @@map("postcodes")
+}
+
+// =============================================================================
+// VOA Properties (Valuation Office Agency)
+// =============================================================================
+
+// Commercial property rating list entries from VOA bulk data.
+// Geocoded via the Postcode table. Used for comparable analysis.
+model VOAProperty {
+  // VOA assessment reference number
+  assessmentRef  String  @id
+  address        String
+  postcode       String
+  description    String?
+  rateableValue  Int?
+  floorArea      Float?
+  latitude       Float?
+  longitude      Float?
+
+  @@index([postcode])
+  @@index([latitude, longitude])
+  @@map("voa_properties")
+}
+
+// =============================================================================
+// Deprivation Index (IMD 2019)
+// =============================================================================
+
+// Index of Multiple Deprivation scores by LSOA.
+// Static dataset — bulk ingest once.
+model DeprivationIndex {
+  // LSOA code — e.g. "E01000001"
+  lsoaCode       String  @id
+  lsoaName       String?
+  // Overall IMD rank (1 = most deprived, ~32,844 = least deprived)
+  imdRank        Int
+  // Decile 1-10 (1 = most deprived 10%, 10 = least deprived 10%)
+  imdDecile      Int
+
+  @@map("deprivation_index")
+}
+
+// =============================================================================
 // Comments
 // =============================================================================
 

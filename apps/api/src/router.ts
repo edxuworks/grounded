@@ -33,6 +33,12 @@ import { annotationRouter } from "@/routers/annotation";
 import { commentRouter } from "@/routers/comment";
 import { mapboxRouter } from "@/routers/mapbox";
 import { documentRouter } from "@/routers/document";
+import { planningRouter } from "@/routers/planning";
+import { crimeRouter } from "@/routers/crime";
+import { environmentRouter } from "@/routers/environment";
+import { propertyRouter } from "@/routers/property";
+import { transportRouter } from "@/routers/transport";
+import { demographicsRouter } from "@/routers/demographics";
 
 export const appRouter = router({
   auth: authRouter,
@@ -44,6 +50,12 @@ export const appRouter = router({
   comment: commentRouter,
   mapbox: mapboxRouter,
   document: documentRouter,
+  planning: planningRouter,
+  crime: crimeRouter,
+  environment: environmentRouter,
+  property: propertyRouter,
+  transport: transportRouter,
+  demographics: demographicsRouter,
 });
 
 /**

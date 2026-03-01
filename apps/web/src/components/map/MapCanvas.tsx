@@ -18,6 +18,10 @@ import { useDrawingStore } from "@/store/useDrawingStore";
 import { DealMarkers } from "@/components/map/DealMarker";
 import { AnnotationLayer, ANNOTATION_FILL_LAYER_ID } from "@/components/map/AnnotationLayer";
 import { TransportPOILayer } from "@/components/map/TransportPOILayer";
+import { PlanningConstraintsLayer } from "@/components/map/PlanningConstraintsLayer";
+import { CrimeHeatmapLayer } from "@/components/map/CrimeHeatmapLayer";
+import { FloodZoneLayer } from "@/components/map/FloodZoneLayer";
+import { PlanningApplicationsLayer } from "@/components/map/PlanningApplicationsLayer";
 import { PreviewPinMarker } from "@/components/map/PreviewPinMarker";
 import { DrawingPreviewLayer } from "@/components/map/DrawingPreviewLayer";
 
@@ -39,7 +43,7 @@ export function MapCanvas() {
     flyToTarget,
     setFlyToTarget,
     selectAnnotation,
-    transportPOIEnabled,
+    enabledLayers,
     previewPin,
   } = useUIStore();
   const { isDrawing, addPoint, currentPoints, finishDrawing, cancelDrawing } = useDrawingStore();
@@ -183,7 +187,11 @@ export function MapCanvas() {
         <DealMarkers />
         <AnnotationLayer />
         <DrawingPreviewLayer cursorPosition={cursorPos} />
-        {transportPOIEnabled && <TransportPOILayer />}
+        {enabledLayers["transport-poi"] && <TransportPOILayer />}
+        {enabledLayers["planning-constraints"] && <PlanningConstraintsLayer />}
+        {enabledLayers["planning-applications"] && <PlanningApplicationsLayer />}
+        {enabledLayers["crime-heatmap"] && <CrimeHeatmapLayer />}
+        {enabledLayers["flood-zones"] && <FloodZoneLayer />}
         <PreviewPinMarker />
       </Map>
 

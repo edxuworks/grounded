@@ -16,6 +16,7 @@ import { trpc } from "@/api/trpc";
 import { PropertyGrid } from "@/components/sidebar/PropertyGrid";
 import { CommentStream } from "@/components/sidebar/CommentStream";
 import { AnnotationPanel } from "@/components/sidebar/AnnotationPanel";
+import { LocationIntelligenceBoard } from "@/components/sidebar/intelligence/LocationIntelligenceBoard";
 
 const STATUS_COLOURS: Record<string, string> = {
   SOURCING: "bg-slate-500/20 text-slate-300",
@@ -26,7 +27,7 @@ const STATUS_COLOURS: Record<string, string> = {
   REJECTED: "bg-red-500/20 text-red-300",
 };
 
-type Tab = "overview" | "comments" | "annotations";
+type Tab = "overview" | "comments" | "annotations" | "intelligence";
 
 export function DealSidebar() {
   const { activeDealId, closeSidebar } = useUIStore();
@@ -59,7 +60,7 @@ export function DealSidebar() {
 
       {/* Tabs */}
       <div className="flex gap-1 px-4 pt-3 shrink-0">
-        {(["overview", "comments", "annotations"] as Tab[]).map((t) => (
+        {(["overview", "intelligence", "comments", "annotations"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -133,6 +134,14 @@ export function DealSidebar() {
 
         {deal && tab === "comments" && (
           <CommentStream dealId={deal.id} />
+        )}
+
+        {deal && tab === "intelligence" && (
+          <LocationIntelligenceBoard
+            latitude={deal.latitude}
+            longitude={deal.longitude}
+            address={deal.address}
+          />
         )}
 
         {deal && tab === "annotations" && (

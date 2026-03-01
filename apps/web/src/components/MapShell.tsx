@@ -63,8 +63,8 @@ export function MapShell() {
         </div>
       )}
 
-      {/* Top-right: layer visibility toggle controls */}
-      <div className="absolute top-4 right-4 z-20">
+      {/* Top-right: layer visibility toggle controls — shifts left when sidebar is open */}
+      <div className={`absolute top-4 z-20 transition-all ${sidebarOpen ? "right-[25.5rem]" : "right-4"}`}>
         <ErrorBoundary label="Layer control">
           <LayerControl />
         </ErrorBoundary>

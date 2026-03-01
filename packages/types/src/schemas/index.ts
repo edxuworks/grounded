@@ -245,6 +245,109 @@ export const CreateCommentSchema = z.object({
 export type CreateCommentInput = z.infer<typeof CreateCommentSchema>;
 
 // =============================================================================
+// Planning (MHCLG Constraints + PlanIt Applications)
+// =============================================================================
+
+export const PlanningConstraintsQuerySchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+export type PlanningConstraintsQueryInput = z.infer<typeof PlanningConstraintsQuerySchema>;
+
+export const PlanningApplicationsQuerySchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  radius: z.number().int().min(100).max(2000).default(500),
+});
+export type PlanningApplicationsQueryInput = z.infer<typeof PlanningApplicationsQuerySchema>;
+
+// =============================================================================
+// Crime (Police UK Street Crime)
+// =============================================================================
+
+export const CrimeQuerySchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+export type CrimeQueryInput = z.infer<typeof CrimeQuerySchema>;
+
+// =============================================================================
+// Environment (EA Flood Risk)
+// =============================================================================
+
+export const FloodRiskQuerySchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+export type FloodRiskQueryInput = z.infer<typeof FloodRiskQuerySchema>;
+
+// =============================================================================
+// Property (EPC + VOA + Broadband)
+// =============================================================================
+
+export const EPCQuerySchema = z.object({
+  address: z.string().min(1).max(500),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+export type EPCQueryInput = z.infer<typeof EPCQuerySchema>;
+
+export const BroadbandQuerySchema = z.object({
+  address: z.string().min(1).max(500),
+});
+export type BroadbandQueryInput = z.infer<typeof BroadbandQuerySchema>;
+
+export const VOAComparablesQuerySchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  radius: z.number().int().min(100).max(5000).default(500),
+});
+export type VOAComparablesQueryInput = z.infer<typeof VOAComparablesQuerySchema>;
+
+export const OwnershipQuerySchema = z.object({
+  postcode: z.string().min(1).max(10),
+});
+export type OwnershipQueryInput = z.infer<typeof OwnershipQuerySchema>;
+
+export const CompanyProfileQuerySchema = z.object({
+  companyNumber: z.string().min(1).max(20),
+});
+export type CompanyProfileQueryInput = z.infer<typeof CompanyProfileQuerySchema>;
+
+export const TrafficFlowQuerySchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+export type TrafficFlowQueryInput = z.infer<typeof TrafficFlowQuerySchema>;
+
+// =============================================================================
+// Transport (PTAL + TfL Journey Times)
+// =============================================================================
+
+export const PTALQuerySchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+export type PTALQueryInput = z.infer<typeof PTALQuerySchema>;
+
+export const JourneyTimeQuerySchema = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+export type JourneyTimeQueryInput = z.infer<typeof JourneyTimeQuerySchema>;
+
+// =============================================================================
+// Demographics (NOMIS + Census + IMD)
+// =============================================================================
+
+export const DemographicsQuerySchema = z.object({
+  lsoa: z.string().min(1).optional(),
+  msoa: z.string().min(1).optional(),
+  postcode: z.string().min(1).optional(),
+});
+export type DemographicsQueryInput = z.infer<typeof DemographicsQuerySchema>;
+
+// =============================================================================
 // Mapbox (Transport POI Proxy)
 // =============================================================================
 

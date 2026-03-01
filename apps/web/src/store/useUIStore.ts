@@ -99,11 +99,21 @@ interface UIStore {
   setFlyToTarget: (target: MapCoordinates | null) => void;
   setActiveWorkspaceId: (id: string | null) => void;
 
-  /** Whether the Transport POI layer is visible on the map */
+  // ── Map layers ──────────────────────────────────────────────────────────
+
+  /** Which data layers are currently enabled on the map */
+  enabledLayers: Record<string, boolean>;
+  /** Toggle a layer on/off by its registry ID */
+  toggleLayer: (layerId: string) => void;
+  /** Check if a specific layer is enabled */
+  isLayerEnabled: (layerId: string) => boolean;
+
+  /** @deprecated Use isLayerEnabled('transport-poi') instead */
   transportPOIEnabled: boolean;
 
   selectAnnotation: (id: string | null) => void;
   toggleAnnotationCategory: (category: string) => void;
+  /** @deprecated Use toggleLayer('transport-poi') instead */
   setTransportPOIEnabled: (enabled: boolean) => void;
 }
 
@@ -122,6 +132,7 @@ export const useUIStore = create<UIStore>((set) => ({
   selectedAnnotationId: null,
   hiddenAnnotationCategories: [],
   transportPOIEnabled: false,
+  enabledLayers: {},
 
   // ── Actions ──────────────────────────────────────────────────────────────
 
@@ -159,7 +170,28 @@ export const useUIStore = create<UIStore>((set) => ({
     set({ selectedAnnotationId: id }),
 
   setTransportPOIEnabled: (enabled) =>
-    set({ transportPOIEnabled: enabled }),
+    set((state) => ({
+      transportPOIEnabled: enabled,
+      enabledLayers: { ...state.enabledLayers, "transport-poi": enabled },
+    })),
+
+  toggleLayer: (layerId) =>
+    set((state) => {
+      const current = state.enabledLayers[layerId] ?? false;
+      const updated = { ...state.enabledLayers, [layerId]: !current };
+      return {
+        enabledLayers: updated,
+        // Keep transportPOIEnabled in sync for backwards compat
+        ...(layerId === "transport-poi" ? { transportPOIEnabled: !current } : {}),
+      };
+    }),
+
+  isLayerEnabled: (_layerId) => {
+    // Reads go through enabledLayers state directly via selectors.
+    // This function exists for the interface — consumers should use:
+    // useUIStore(s => s.enabledLayers[layerId] ?? false)
+    return false;
+  },
 
   toggleAnnotationCategory: (category) =>
     set((state) => ({

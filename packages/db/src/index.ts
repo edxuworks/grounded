@@ -26,6 +26,9 @@ export type {
   Deal,
   Annotation,
   Comment,
+  Postcode,
+  VOAProperty,
+  DeprivationIndex,
   Prisma,
 } from "./generated/client";
 
