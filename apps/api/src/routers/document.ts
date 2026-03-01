@@ -43,8 +43,18 @@ export interface ExtractedAddress {
   full_address: string;
 }
 
+export interface ExtractedCompetitor {
+  name: string;
+  address: string | null;
+}
+
 interface ExtractionError {
   error: string;
+}
+
+interface FullExtractionResult {
+  subject: ExtractedAddress;
+  competitors: ExtractedCompetitor[];
 }
 
 // ── Router ────────────────────────────────────────────────────────────────────
@@ -90,21 +100,27 @@ export const documentRouter = router({
                 },
                 {
                   type: "text",
-                  text: `You are a real estate document analyst. Extract the primary subject property address from this offering memorandum or property investment document.
+                  text: `You are a real estate document analyst. Extract the subject property address and any competitor properties from this offering memorandum or property investment document.
 
 Return ONLY a valid JSON object with these exact fields:
 {
-  "address": "street address",
-  "city": "city name",
-  "state": "state or county",
-  "zip": "postcode or zip code",
-  "full_address": "full formatted address on one line"
+  "subject": {
+    "address": "street address",
+    "city": "city name",
+    "state": "state or county",
+    "zip": "postcode or zip code",
+    "full_address": "full formatted address on one line"
+  },
+  "competitors": [
+    { "name": "Property name", "address": "full address on one line or null if not stated in document" }
+  ]
 }
 
-If you cannot find a clear property address, return exactly:
-{ "error": "Address not found" }
-
-Do not include any text outside the JSON object.`,
+Rules:
+- "subject" is the primary property being offered/sold. If not found, return { "error": "Address not found" } at the top level instead.
+- "competitors" is a list of competing properties explicitly mentioned in the document (comparable sales, competing hotels, nearby retail etc.). Set "address" to null if the document does not include the competitor's address.
+- Return an empty array [] for "competitors" if none are mentioned.
+- Do not include any text outside the JSON object.`,
                 },
               ],
             },
@@ -134,9 +150,9 @@ Do not include any text outside the JSON object.`,
         .replace(/^```\s*/i, "")
         .replace(/\s*```$/i, "");
 
-      let parsed: ExtractedAddress | ExtractionError;
+      let parsed: FullExtractionResult | ExtractionError;
       try {
-        parsed = JSON.parse(raw) as ExtractedAddress | ExtractionError;
+        parsed = JSON.parse(raw) as FullExtractionResult | ExtractionError;
       } catch {
         console.error("[document] Failed to parse Claude response as JSON:", raw);
         throw new TRPCError({
@@ -154,7 +170,10 @@ Do not include any text outside the JSON object.`,
         });
       }
 
-      return parsed;
+      return {
+        ...parsed.subject,
+        competitors: Array.isArray(parsed.competitors) ? parsed.competitors : [],
+      };
     }),
 
   /**

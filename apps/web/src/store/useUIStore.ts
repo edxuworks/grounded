@@ -29,6 +29,13 @@ interface PreviewPin {
   address: string;
 }
 
+export interface CompetitorPin {
+  name: string;
+  address: string;
+  longitude: number;
+  latitude: number;
+}
+
 interface UIStore {
   // ── Panel visibility ─────────────────────────────────────────────────────
 
@@ -93,6 +100,10 @@ interface UIStore {
   closeLeftPanel: () => void;
   setLeftPanelMode: (mode: UIStore["leftPanelMode"]) => void;
 
+  /** Competitor properties extracted from OM analysis, shown as red pins */
+  competitorPins: CompetitorPin[];
+  setCompetitorPins: (pins: CompetitorPin[]) => void;
+
   setPendingPin: (coords: MapCoordinates | null) => void;
   setPreviewPin: (pin: PreviewPin | null) => void;
   setPendingAddress: (address: string | null) => void;
@@ -126,6 +137,7 @@ export const useUIStore = create<UIStore>((set) => ({
   activeDealId: null,
   pendingPin: null,
   previewPin: null,
+  competitorPins: [],
   pendingAddress: null,
   activeWorkspaceId: null,
   flyToTarget: null,
@@ -153,6 +165,9 @@ export const useUIStore = create<UIStore>((set) => ({
 
   setPendingPin: (coords) =>
     set({ pendingPin: coords }),
+
+  setCompetitorPins: (pins) =>
+    set({ competitorPins: pins }),
 
   setPreviewPin: (pin) =>
     set({ previewPin: pin }),

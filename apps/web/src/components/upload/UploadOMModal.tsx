@@ -3,23 +3,26 @@
  *
  * Allows the user to upload a PDF offering memorandum (or any property
  * investment document). The file is base64-encoded client-side and sent
- * to the backend where Claude extracts the subject property address,
- * which is then geocoded to lat/lng via Mapbox.
+ * to the backend where Claude extracts the subject property address AND
+ * any competitor properties mentioned in the document — all in one LLM call.
+ * Addresses are then geocoded via Mapbox.
  *
  * States:
  *  idle       — drag-and-drop zone
  *  analysing  — spinner while Claude + Mapbox work
- *  result     — editable address fields + "Plot on Map" / "Cancel"
+ *  result     — editable address fields + competitor list + "Plot on Map" / "Cancel"
  *  error      — error message + retry
  *
- * On success: calls onPlot({ lng, lat, address }) and closes itself.
- * The parent is responsible for storing the result in UIStore.
+ * On success: calls onPlot({ lng, lat, address }) and sets competitorPins in
+ * UIStore. The parent is responsible for storing the previewPin result.
  */
 
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { X, Upload, MapPin, RotateCcw, FileText, Loader2 } from "lucide-react";
 import { trpc } from "@/api/trpc";
+import { useUIStore } from "@/store/useUIStore";
+import type { CompetitorPin } from "@/store/useUIStore";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,6 +38,16 @@ interface ExtractedFields {
   state: string;
   zip: string;
   full_address: string;
+}
+
+interface ExtractedCompetitor {
+  name: string;
+  address: string | null;
+}
+
+interface GeocodedCompetitor extends ExtractedCompetitor {
+  lng: number | null;
+  lat: number | null;
 }
 
 type ModalState = "idle" | "analysing" | "result" | "error";
@@ -56,9 +69,11 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
   const [errorMessage, setErrorMessage] = useState("");
   const [extractedFields, setExtractedFields] = useState<ExtractedFields | null>(null);
   const [fileName, setFileName] = useState("");
-
-  // Geocoded coordinates — stored alongside extracted fields.
   const [geocoded, setGeocoded] = useState<{ lng: number; lat: number } | null>(null);
+  const [competitors, setCompetitors] = useState<GeocodedCompetitor[]>([]);
+  const [competitorsLoading, setCompetitorsLoading] = useState(false);
+
+  const { setCompetitorPins } = useUIStore();
 
   // ── tRPC mutations ──────────────────────────────────────────────────────────
 
@@ -72,7 +87,6 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
       const reader = new FileReader();
       reader.onload = () => {
         const result = reader.result as string;
-        // Strip the data URL prefix (e.g. "data:application/pdf;base64,")
         const base64 = result.split(",")[1];
         if (!base64) {
           reject(new Error("Failed to encode file"));
@@ -89,7 +103,6 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
 
   const processFile = useCallback(
     async (file: File) => {
-      // Client-side validation.
       if (file.type !== "application/pdf") {
         setErrorMessage("Only PDF files are supported.");
         setModalState("error");
@@ -115,13 +128,17 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
         return;
       }
 
-      // Step 1: Claude extracts the address.
+      // Step 1: Claude extracts subject address + competitors in one call.
       let extracted: ExtractedFields;
+      let rawCompetitors: ExtractedCompetitor[] = [];
       try {
-        extracted = await analyzeMutation.mutateAsync({
+        const result = await analyzeMutation.mutateAsync({
           fileBase64: base64,
           fileName: file.name,
         });
+        const { competitors: comp, ...subjectFields } = result;
+        extracted = subjectFields;
+        rawCompetitors = comp ?? [];
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Failed to analyse document.";
@@ -130,7 +147,7 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
         return;
       }
 
-      // Step 2: Mapbox geocodes the address.
+      // Step 2: Geocode subject address.
       let coords: { lng: number; lat: number };
       try {
         const geo = await geocodeMutation.mutateAsync({
@@ -138,8 +155,6 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
         });
         coords = { lng: geo.lng, lat: geo.lat };
       } catch (err: unknown) {
-        // Geocoding failed — still show result so user can see the address,
-        // but we can't plot it. Surface the error on the result screen.
         const message =
           err instanceof Error ? err.message : "Could not geocode address.";
         setExtractedFields(extracted);
@@ -152,6 +167,28 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
       setExtractedFields(extracted);
       setGeocoded(coords);
       setModalState("result");
+
+      // Step 3: Geocode competitors in parallel (non-blocking — result panel is
+      // already shown, competitors section updates reactively as they resolve).
+      if (rawCompetitors.length > 0) {
+        setCompetitorsLoading(true);
+        const settled = await Promise.allSettled(
+          rawCompetitors.map(async (c) => {
+            if (!c.address) return { ...c, lng: null, lat: null };
+            try {
+              const geo = await geocodeMutation.mutateAsync({ full_address: c.address });
+              return { ...c, lng: geo.lng, lat: geo.lat };
+            } catch {
+              return { ...c, lng: null, lat: null };
+            }
+          })
+        );
+        const geocodedCompetitors = settled.map((r) =>
+          r.status === "fulfilled" ? r.value : { name: "", address: null, lng: null, lat: null }
+        );
+        setCompetitors(geocodedCompetitors);
+        setCompetitorsLoading(false);
+      }
     },
     [analyzeMutation, geocodeMutation]
   );
@@ -171,6 +208,18 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
 
   const handlePlot = () => {
     if (!extractedFields || !geocoded) return;
+
+    // Set competitor pins in UIStore so CompetitorPinsLayer renders them.
+    const plottable: CompetitorPin[] = competitors
+      .filter((c) => c.lng !== null && c.lat !== null && c.address)
+      .map((c) => ({
+        name: c.name,
+        address: c.address!,
+        longitude: c.lng!,
+        latitude: c.lat!,
+      }));
+    setCompetitorPins(plottable);
+
     onPlot({
       lng: geocoded.lng,
       lat: geocoded.lat,
@@ -179,22 +228,27 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
     onClose();
   };
 
+  const handleClose = () => {
+    setCompetitorPins([]);
+    onClose();
+  };
+
   const handleRetry = () => {
     setModalState("idle");
     setErrorMessage("");
     setExtractedFields(null);
     setGeocoded(null);
+    setCompetitors([]);
     setFileName("");
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    // Backdrop
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget) handleClose();
       }}
     >
       <div className="relative w-full max-w-md mx-4 bg-land-panel border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
@@ -205,7 +259,7 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
             <h2 className="text-sm font-semibold text-land-text">Upload Offering Memorandum</h2>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-land-muted hover:text-land-text transition-colors"
           >
             <X size={14} />
@@ -244,13 +298,13 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
             <div className="flex flex-col items-center py-8 gap-4">
               <Loader2 size={32} className="text-land-accent animate-spin" />
               <div className="text-center">
-                <p className="text-sm font-medium text-land-text">Extracting property address…</p>
+                <p className="text-sm font-medium text-land-text">Analysing document…</p>
                 <p className="text-xs text-land-muted mt-1">{fileName}</p>
               </div>
             </div>
           )}
 
-          {/* ── Result: editable address fields ── */}
+          {/* ── Result: editable address fields + competitors ── */}
           {modalState === "result" && extractedFields && (
             <div className="space-y-4">
               {/* AI badge */}
@@ -303,6 +357,9 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
                 </div>
               )}
 
+              {/* Competitors section */}
+              <CompetitorsList competitors={competitors} loading={competitorsLoading} />
+
               {/* Actions */}
               <div className="flex gap-2 pt-1">
                 {geocoded ? (
@@ -338,7 +395,7 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
                   </button>
                 )}
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="px-3 py-2 text-sm text-land-muted hover:text-land-text hover:bg-white/5 rounded-lg transition-colors"
                 >
                   Cancel
@@ -363,7 +420,7 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
                   Try again
                 </button>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="px-3 py-2 text-sm text-land-muted hover:text-land-text hover:bg-white/5 rounded-lg transition-colors"
                 >
                   Cancel
@@ -373,6 +430,60 @@ export function UploadOMModal({ onPlot, onClose }: Props) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Sub-component: competitors list ────────────────────────────────────────
+
+interface CompetitorsListProps {
+  competitors: GeocodedCompetitor[];
+  loading: boolean;
+}
+
+function CompetitorsList({ competitors, loading }: CompetitorsListProps) {
+  if (!loading && competitors.length === 0) return null;
+
+  const plottable = competitors.filter((c) => c.lng !== null).length;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium text-land-muted">Competitors in document</span>
+        {!loading && competitors.length > 0 && (
+          <span className="text-xs text-land-muted">
+            {plottable}/{competitors.length} plottable
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-lg">
+          <Loader2 size={12} className="text-land-muted animate-spin flex-shrink-0" />
+          <span className="text-xs text-land-muted">Finding competitors…</span>
+        </div>
+      ) : (
+        <div className="space-y-1 max-h-36 overflow-y-auto">
+          {competitors.map((c, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-2 px-3 py-2 bg-white/5 rounded-lg"
+            >
+              <div
+                className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                  c.lng !== null ? "bg-red-500" : "bg-white/20"
+                }`}
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-land-text truncate">{c.name}</p>
+                <p className="text-xs text-land-muted truncate">
+                  {c.address ?? "Address not in document"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

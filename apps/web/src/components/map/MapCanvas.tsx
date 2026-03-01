@@ -23,6 +23,7 @@ import { CrimeHeatmapLayer } from "@/components/map/CrimeHeatmapLayer";
 import { FloodZoneLayer } from "@/components/map/FloodZoneLayer";
 import { PlanningApplicationsLayer } from "@/components/map/PlanningApplicationsLayer";
 import { PreviewPinMarker } from "@/components/map/PreviewPinMarker";
+import { CompetitorPinsLayer } from "@/components/map/CompetitorPinsLayer";
 import { DrawingPreviewLayer } from "@/components/map/DrawingPreviewLayer";
 
 const MAPBOX_TOKEN = import.meta.env["VITE_MAPBOX_PUBLIC_TOKEN"] as string | undefined;
@@ -193,6 +194,7 @@ export function MapCanvas() {
         {enabledLayers["crime-heatmap"] && <CrimeHeatmapLayer />}
         {enabledLayers["flood-zones"] && <FloodZoneLayer />}
         <PreviewPinMarker />
+        <CompetitorPinsLayer />
       </Map>
 
       {isDrawing && (

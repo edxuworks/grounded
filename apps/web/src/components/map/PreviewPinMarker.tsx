@@ -23,6 +23,7 @@ export function PreviewPinMarker() {
   const {
     previewPin,
     setPreviewPin,
+    setCompetitorPins,
     setPendingPin,
     setPendingAddress,
     openLeftPanel,
@@ -40,6 +41,7 @@ export function PreviewPinMarker() {
 
   const handleDismiss = () => {
     setPreviewPin(null);
+    setCompetitorPins([]);
   };
 
   return (
