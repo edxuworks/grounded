@@ -138,6 +138,7 @@ export const dealRouter = router({
           longitude: input.longitude,
           latitude: input.latitude,
           status: input.status,
+          competitors: input.competitors.length > 0 ? input.competitors : undefined,
           createdById: ctx.user.id,
         },
         include: {

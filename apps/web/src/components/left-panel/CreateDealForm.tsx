@@ -36,7 +36,7 @@ type FormValues = z.infer<typeof FormSchema>;
 
 export function CreateDealForm() {
   const { activeWorkspaceId } = useWorkspace();
-  const { pendingPin, setPendingPin, setLeftPanelMode, openSidebar, pendingAddress, setPendingAddress } = useUIStore();
+  const { pendingPin, setPendingPin, setLeftPanelMode, openSidebar, pendingAddress, setPendingAddress, competitorPins } = useUIStore();
 
   // Fetch deal files to populate the "save to" select.
   const { data: dealFiles } = trpc.dealFile.list.useQuery(
@@ -79,6 +79,7 @@ export function CreateDealForm() {
       address: values.address,
       longitude: pendingPin.longitude,
       latitude: pendingPin.latitude,
+      competitors: competitorPins,
     });
   };
 

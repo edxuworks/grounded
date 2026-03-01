@@ -160,6 +160,13 @@ export const CreateDealSchema = z.object({
   longitude: z.number().min(-180).max(180),
   latitude: z.number().min(-90).max(90),
   status: DealStatusSchema.default("SOURCING"),
+  // Competitor properties extracted from the OM PDF. Empty array for map-click deals.
+  competitors: z.array(z.object({
+    name: z.string(),
+    address: z.string(),
+    longitude: z.number(),
+    latitude: z.number(),
+  })).optional().default([]),
 });
 export type CreateDealInput = z.infer<typeof CreateDealSchema>;
 

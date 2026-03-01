@@ -18,6 +18,16 @@ import { CommentStream } from "@/components/sidebar/CommentStream";
 import { AnnotationPanel } from "@/components/sidebar/AnnotationPanel";
 import { LocationIntelligenceBoard } from "@/components/sidebar/intelligence/LocationIntelligenceBoard";
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const STATUS_COLOURS: Record<string, string> = {
   SOURCING: "bg-slate-500/20 text-slate-300",
   UNDERWRITING: "bg-blue-500/20 text-blue-300",
@@ -30,7 +40,7 @@ const STATUS_COLOURS: Record<string, string> = {
 type Tab = "overview" | "comments" | "annotations" | "intelligence";
 
 export function DealSidebar() {
-  const { activeDealId, closeSidebar } = useUIStore();
+  const { activeDealId, closeSidebar, competitorPins } = useUIStore();
   const { activeWorkspaceId } = useWorkspace();
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -42,6 +52,13 @@ export function DealSidebar() {
   // Extract fieldValues early so TypeScript resolves it against a simple type,
   // avoiding "type instantiation is excessively deep" from Prisma.JsonValue.
   const dealFieldValues = (deal as { fieldValues?: unknown } | undefined)?.fieldValues as Record<string, unknown> ?? {};
+
+  // Extract competitors — prefer DB value, fall back to UIStore pins for deals
+  // created before the competitors column existed.
+  const dbCompetitors = ((deal as { competitors?: unknown } | undefined)?.competitors ?? []) as Array<{
+    name: string; address: string; longitude: number; latitude: number;
+  }>;
+  const competitors = dbCompetitors.length > 0 ? dbCompetitors : competitorPins;
 
   return (
     <div className="glass-panel h-full flex flex-col">
@@ -113,6 +130,33 @@ export function DealSidebar() {
                 fieldValues={dealFieldValues}
               />
             </div>
+
+            {/* Competitors */}
+            {competitors.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-land-muted uppercase tracking-wider mb-2">
+                  Competitors · {competitors.length}
+                </p>
+                <div className="space-y-1.5">
+                  {competitors.map((c, i) => {
+                    const distKm = haversineKm(deal.latitude, deal.longitude, c.latitude, c.longitude);
+                    const dist = distKm < 1
+                      ? `${Math.round(distKm * 1000)} m`
+                      : `${distKm.toFixed(1)} km`;
+                    return (
+                      <div key={i} className="flex items-start gap-2 px-3 py-2 bg-white/5 rounded-lg">
+                        <div className="mt-1 w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-medium text-land-text truncate">{c.name}</p>
+                          <p className="text-xs text-land-muted truncate">{c.address}</p>
+                        </div>
+                        <span className="text-xs text-land-muted whitespace-nowrap shrink-0">{dist}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Metadata */}
             <div className="pt-2 border-t border-white/5 space-y-1">

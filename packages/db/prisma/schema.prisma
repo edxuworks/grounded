@@ -257,6 +257,11 @@ model Deal {
   // Validated against the workspace's field definitions at the API layer.
   fieldValues Json       @default("{}")
 
+  // Competing properties extracted from the OM PDF at deal creation time.
+  // Shape: Array<{ name: string; address: string; longitude: number; latitude: number }>
+  // Null for deals created by clicking the map (no OM uploaded).
+  competitors Json?
+
   // Pinned deals appear in the dashboard pipeline table view.
   pinned      Boolean    @default(false)
   createdById String

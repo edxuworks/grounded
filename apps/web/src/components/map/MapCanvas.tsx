@@ -162,6 +162,8 @@ export function MapCanvas() {
         doubleClickZoom={!isDrawing}
         cursor={isDrawing ? "crosshair" : "grab"}
         interactiveLayerIds={[ANNOTATION_FILL_LAYER_ID]}
+        attributionControl={false}
+        logoPosition="bottom-right"
       >
         {/* 3D buildings — fill-extrusion fades in from zoom 13 */}
         <Layer
