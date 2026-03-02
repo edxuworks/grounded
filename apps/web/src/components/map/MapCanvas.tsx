@@ -155,7 +155,7 @@ export function MapCanvas() {
         mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={DEFAULT_VIEW}
         style={{ width: "100%", height: "100%" }}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle="mapbox://styles/mapbox/light-v11"
         onClick={handleMapClick}
         onDblClick={handleDblClick}
         onMouseMove={handleMouseMove}

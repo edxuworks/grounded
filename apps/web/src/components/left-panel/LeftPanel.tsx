@@ -9,6 +9,8 @@
 
 import { X } from "lucide-react";
 import { useUIStore } from "@/store/useUIStore";
+
+const HOME_URL = "http://localhost:3000";
 import { DealFileManager } from "@/components/left-panel/DealFileManager";
 import { CreateDealForm } from "@/components/left-panel/CreateDealForm";
 import { FieldDefManager } from "@/components/sidebar/FieldDefManager";
@@ -19,7 +21,16 @@ export function LeftPanel() {
   return (
     <div className="glass-panel rounded-xl overflow-hidden">
       {/* Panel header */}
-      <div className="flex items-center justify-between p-4 border-b border-white/10">
+      <div className="flex items-center justify-between p-4 border-b border-black/10">
+        <div className="flex items-center gap-3">
+          <a
+            href={HOME_URL}
+            className="text-xs font-semibold tracking-widest uppercase text-land-text hover:text-land-accent transition-colors"
+            title="GROUNDED home"
+          >
+            GROUNDED
+          </a>
+          <span className="text-black/10 select-none">|</span>
         <div className="flex gap-1">
           <TabButton
             active={leftPanelMode === "deal-files"}
@@ -34,9 +45,10 @@ export function LeftPanel() {
             Fields
           </TabButton>
         </div>
+        </div>
         <button
           onClick={closeLeftPanel}
-          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 text-land-muted hover:text-land-text transition-colors"
+          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-black/5 text-land-muted hover:text-land-text transition-colors"
         >
           <X size={14} />
         </button>
@@ -65,7 +77,7 @@ function TabButton({ active, onClick, children }: TabButtonProps) {
       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
         active
           ? "bg-land-accent text-white"
-          : "text-land-muted hover:text-land-text hover:bg-white/5"
+          : "text-land-muted hover:text-land-text hover:bg-black/5"
       }`}
     >
       {children}

@@ -7,9 +7,9 @@
    ============================================================ */
 
 @layer base {
-  /* Apply dark background to the entire app. The map renders underneath
+  /* Apply light background to the entire app. The map renders underneath
      floating panels, so the body background must match the map background
-     to prevent flashes of white during load. */
+     to prevent flashes during load. */
   body {
     @apply bg-land-bg text-land-text;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -22,7 +22,7 @@
     @apply w-full h-screen overflow-hidden;
   }
 
-  /* Improve font rendering for dark backgrounds */
+  /* Improve font rendering */
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -36,10 +36,10 @@
 
 @layer components {
   .glass-panel {
-    @apply bg-land-panel/90 backdrop-blur-md border border-white/10 shadow-2xl;
+    @apply bg-land-panel/95 backdrop-blur-md border border-black/10 shadow-lg;
   }
 
-  /* Scrollbar styling — thin scrollbar matching the dark theme */
+  /* Scrollbar styling — thin scrollbar matching the light theme */
   .styled-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: theme('colors.land-muted') transparent;

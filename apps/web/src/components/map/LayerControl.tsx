@@ -19,7 +19,7 @@ export function LayerControl() {
     <div className="relative">
       <button
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-10 h-10 glass-panel rounded-lg flex items-center justify-center text-land-muted hover:text-land-text transition-colors"
+        className="w-10 h-10 bg-land-panel border border-land-accent/30 hover:border-land-accent rounded-lg flex items-center justify-center text-land-accent transition-colors shadow-md"
         title="Toggle map layers"
       >
         <Layers size={18} />
@@ -69,7 +69,7 @@ interface LayerToggleProps {
 function LayerToggle({ label, checked = false, onChange, disabled, disabledReason }: LayerToggleProps) {
   return (
     <label
-      className={`flex items-center justify-between px-1 py-1.5 rounded-lg cursor-pointer ${disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-white/5"}`}
+      className={`flex items-center justify-between px-1 py-1.5 rounded-lg cursor-pointer ${disabled ? "opacity-40 cursor-not-allowed" : "hover:bg-land-accent/10"}`}
       title={disabledReason}
     >
       <span className="text-sm text-land-text">{label}</span>

@@ -26,7 +26,9 @@
  */
 
 import { useState } from "react";
-import { Upload, ChevronLeft } from "lucide-react";
+import { Upload, ChevronLeft, Home } from "lucide-react";
+
+const HOME_URL = "http://localhost:3000";
 import { useUIStore } from "@/store/useUIStore";
 import { useWorkspace } from "@/features/workspace/WorkspaceProvider";
 import { MapCanvas } from "@/components/map/MapCanvas";
@@ -79,22 +81,30 @@ export function MapShell() {
         </div>
       )}
 
-      {/* Top-left controls: back to workspaces + toggle panel */}
+      {/* Top-left controls: home + back to workspaces + toggle panel */}
       {!leftPanelOpen && (
         <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
+          {/* Home — back to marketing site */}
+          <a
+            href={HOME_URL}
+            className="text-xs font-semibold tracking-widest uppercase text-land-accent hover:text-land-accent-hover transition-colors"
+            title="GROUNDED home"
+          >
+            GROUNDED
+          </a>
           {/* Back to workspace dashboard */}
           <button
             onClick={handleBackToDashboard}
-            className="flex items-center gap-1.5 h-10 px-3 bg-land-panel hover:bg-land-surface border border-white/10 rounded-lg text-land-muted hover:text-land-text transition-colors shadow-lg text-xs font-medium"
+            className="flex items-center gap-1.5 h-10 px-3 bg-land-panel hover:bg-land-surface border border-land-accent/30 rounded-lg text-land-text hover:border-land-accent transition-colors shadow-md text-xs font-medium"
             title="Back to workspaces"
           >
-            <ChevronLeft size={13} />
+            <ChevronLeft size={13} className="text-land-accent" />
             {workspaceName}
           </button>
           {/* Toggle left panel */}
           <button
             onClick={() => useUIStore.getState().openLeftPanel()}
-            className="w-10 h-10 bg-land-panel hover:bg-land-surface border border-white/10 rounded-lg flex items-center justify-center text-land-text transition-colors shadow-lg"
+            className="w-10 h-10 bg-land-panel hover:bg-land-surface border border-land-accent/30 hover:border-land-accent rounded-lg flex items-center justify-center text-land-accent transition-colors shadow-md"
             title="Toggle panel"
           >
             ☰
@@ -105,10 +115,10 @@ export function MapShell() {
       {/* Upload OM button — bottom-left floating */}
       <button
         onClick={() => setUploadModalOpen(true)}
-        className="absolute bottom-6 left-6 z-20 flex items-center gap-2 px-4 py-2.5 bg-land-panel hover:bg-land-surface border border-white/10 rounded-xl text-sm font-medium text-land-text transition-colors shadow-lg"
+        className="absolute bottom-6 left-6 z-20 flex items-center gap-2 px-4 py-2.5 bg-land-accent hover:bg-land-accent-hover rounded-xl text-sm font-medium text-white transition-colors shadow-md"
         title="Upload Offering Memorandum"
       >
-        <Upload size={15} className="text-land-accent" />
+        <Upload size={15} className="text-white" />
         Upload OM
       </button>
 

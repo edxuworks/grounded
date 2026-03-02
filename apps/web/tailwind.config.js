@@ -3,22 +3,22 @@ export default {
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
-      // Custom colour palette for Grounded's dark glassmorphic theme.
+      // Custom colour palette — light architectural theme matching marketing site.
       // Using semantic names (land-*) rather than raw colours means we can
       // adjust the palette in one place without touching components.
       colors: {
         // Page/app backgrounds
-        "land-bg": "#0f1729",        // Deepest background (map sits underneath)
-        "land-panel": "#1a2035",     // Floating panel backgrounds
-        "land-surface": "#1e293b",   // Card/input surfaces within panels
+        "land-bg": "#F7F7F4",        // Warm off-white (matches marketing site)
+        "land-panel": "#FFFFFF",     // Floating panel backgrounds
+        "land-surface": "#F0F2EF",   // Card/input surfaces within panels
 
         // Text
-        "land-text": "#e2e8f0",      // Primary text
-        "land-muted": "#64748b",     // Secondary/placeholder text
+        "land-text": "#111315",      // Primary text
+        "land-muted": "#8C9691",     // Secondary/placeholder text
 
         // Accent
-        "land-accent": "#3b82f6",    // Primary interactive colour (blue)
-        "land-accent-hover": "#2563eb",
+        "land-accent": "#5F8D76",    // Primary interactive colour (sage green)
+        "land-accent-hover": "#4F7E68",
 
         // Status colours (deal pipeline stages)
         "status-sourcing": "#6366f1",
