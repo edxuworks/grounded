@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { ScrollReset } from '@/components/ScrollReset'
 import './globals.css'
 
 const inter = Inter({
@@ -46,7 +47,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en-GB" className={inter.variable}>
-      <body>{children}</body>
+      <body>
+        <ScrollReset />
+        {children}
+      </body>
     </html>
   )
 }
