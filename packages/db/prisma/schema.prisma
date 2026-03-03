@@ -25,6 +25,8 @@ generator client {
   // postgresqlExtensions preview feature enables PostGIS via Prisma
   previewFeatures = ["postgresqlExtensions"]
   output          = "../src/generated/client"
+  // Include Linux binary for Vercel (Amazon Linux) alongside native (macOS/Windows dev)
+  binaryTargets   = ["native", "rhel-openssl-1.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
