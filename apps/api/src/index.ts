@@ -90,30 +90,35 @@ app.use(
   })
 );
 
-// ── Start server ──────────────────────────────────────────────────────────
-const server = app.listen(PORT, () => {
-  console.log(`[api] Server running on http://localhost:${PORT}`);
-  console.log(`[api] tRPC endpoint: http://localhost:${PORT}/api/trpc`);
-});
-
-// ── Graceful shutdown ─────────────────────────────────────────────────────
-// Railway and similar PaaS platforms send SIGTERM before stopping a container.
-// We close the HTTP server (stop accepting new connections) and then
-// disconnect Prisma to release the database connection pool cleanly.
-const shutdown = async (signal: string) => {
-  console.log(`[api] Received ${signal}, shutting down gracefully...`);
-  server.close(async () => {
-    await prisma.$disconnect();
-    console.log("[api] Shutdown complete.");
-    process.exit(0);
+// ── Start server (skipped on Vercel serverless) ───────────────────────────
+if (!process.env["VERCEL"]) {
+  const server = app.listen(PORT, () => {
+    console.log(`[api] Server running on http://localhost:${PORT}`);
+    console.log(`[api] tRPC endpoint: http://localhost:${PORT}/api/trpc`);
   });
 
-  // Force-kill after 10s if graceful shutdown stalls.
-  setTimeout(() => {
-    console.error("[api] Graceful shutdown timed out — forcing exit.");
-    process.exit(1);
-  }, 10_000);
-};
+  // ── Graceful shutdown ───────────────────────────────────────────────────
+  // Railway and similar PaaS platforms send SIGTERM before stopping a container.
+  // We close the HTTP server (stop accepting new connections) and then
+  // disconnect Prisma to release the database connection pool cleanly.
+  const shutdown = async (signal: string) => {
+    console.log(`[api] Received ${signal}, shutting down gracefully...`);
+    server.close(async () => {
+      await prisma.$disconnect();
+      console.log("[api] Shutdown complete.");
+      process.exit(0);
+    });
 
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT", () => shutdown("SIGINT"));
+    // Force-kill after 10s if graceful shutdown stalls.
+    setTimeout(() => {
+      console.error("[api] Graceful shutdown timed out — forcing exit.");
+      process.exit(1);
+    }, 10_000);
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
+
+// Export for Vercel serverless
+export default app;
