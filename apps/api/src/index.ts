@@ -16,7 +16,7 @@
 import dns from "dns";
 dns.setDefaultResultOrder("ipv4first");
 
-import express from "express";
+import express, { type Express } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -24,7 +24,7 @@ import { appRouter } from "@/router";
 import { createContext } from "@/context";
 import { prisma } from "@/lib/prisma";
 
-const app = express();
+const app: Express = express();
 const PORT = Number(process.env["PORT"] ?? 3001);
 
 // ── Security headers ───────────────────────────────────────────────────────
