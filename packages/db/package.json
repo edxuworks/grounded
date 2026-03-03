@@ -20,7 +20,7 @@
     "db:studio": "prisma studio",
 
     "db:seed": "tsx src/seed.ts",
-    "build": "tsc && cp -r src/generated dist/",
+    "build": "prisma generate && tsc && cp -r src/generated dist/",
     "check-types": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
