@@ -1,0 +1,11 @@
+node_modules
+dist
+dist-vercel
+build
+.next
+out
+coverage
+.turbo
+pnpm-lock.yaml
+packages/db/src/generated
+CHANGELOG.md

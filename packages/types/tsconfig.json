@@ -1,0 +1,9 @@
+{
+  "extends": "@grounded/config/tsconfig/node-lib",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

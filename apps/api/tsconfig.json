@@ -1,0 +1,16 @@
+{
+  "extends": "@grounded/config/tsconfig/node-app",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    // '@/' maps to src/ within this app.
+    // '@grounded/types' and '@grounded/db' resolve via node_modules symlinks
+    // to their built dist/ outputs — no source-pointing aliases needed.
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  // Exclude test files from production build — vitest uses its own alias config.
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "src/**/__tests__/**", "src/**/*.test.ts"]
+}

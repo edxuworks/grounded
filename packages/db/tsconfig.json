@@ -1,0 +1,17 @@
+{
+  // Extends the shared node-lib config so this package emits .d.ts files
+  // usable by both apps/api (Node.js) and apps/web (Vite/bundler).
+  "extends": "@grounded/config/tsconfig/node-lib",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "types": ["node"],
+    // Reference the Prisma-generated client types so they are included
+    // in type-checking even though they live outside src/.
+    "paths": {
+      "@prisma/client": ["./node_modules/@prisma/client"]
+    }
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "prisma"]
+}

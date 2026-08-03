@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "installCommand": "echo 'skip install — bundle is self-contained'",
+  "builds": [
+    {
+      "src": "dist-vercel/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["dist-vercel/**"]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "dist-vercel/index.js"
+    }
+  ]
+}

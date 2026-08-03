@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Grounded — geospatial real estate investment analysis" />
+    <title>Grounded</title>
+    <!--
+      Mapbox GL requires this worker script to be loaded from a CDN.
+      Without it, map tiles fail to render.
+      In production, pin to a specific version to prevent CDN surprises.
+    -->
+    <script>
+      // Set Mapbox worker URL before the bundle loads.
+      // This is required for Vite/esbuild bundlers where the worker
+      // can't be automatically co-located with the main bundle.
+      window.MAPBOX_WORKER_URL = 'https://api.mapbox.com/mapbox-gl-js/v3.9.3/mapbox-gl-csp-worker.js';
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

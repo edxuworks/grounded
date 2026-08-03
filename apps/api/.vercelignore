@@ -1,0 +1,11 @@
+# The deployed function is the self-contained esbuild bundle in dist-vercel/.
+# Everything else (source, workspace node_modules, tsc dist) is unnecessary
+# and node_modules would break install with pnpm workspace: protocol.
+node_modules
+src
+dist
+.turbo
+*.log
+build-vercel.mjs
+vitest.config.ts
+tsconfig.json

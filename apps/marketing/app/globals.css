@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 247 247 244;
+    --foreground: 17 19 21;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    /* Sections gently click into place when scrolling near their boundary */
+    scroll-snap-type: y proximity;
+  }
+
+  section {
+    scroll-snap-align: start;
+    /* Allow scrolling within sections taller than the viewport */
+    scroll-snap-stop: normal;
+  }
+
+  body {
+    background-color: #F7F7F4;
+    color: #111315;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Reduce motion for accessibility */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
